@@ -5,7 +5,7 @@ import subprocess
 from typing import Any, Dict, Tuple
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def get_pandoc_info() -> Dict[str, Any]:
     """
     Return path and version information for the system's pandoc and
@@ -58,7 +58,7 @@ def get_command_info(command: str) -> dict:
     Returns a dictionary containing some information about a command
     """
 
-    command_info_dict = dict()
+    command_info_dict = {}
 
     path = shutil.which(command)
     command_info_dict[command] = bool(path)

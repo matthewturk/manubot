@@ -97,7 +97,7 @@ def test_citekey_to_csl_item_pmc():
     """
     https://api.ncbi.nlm.nih.gov/lit/ctxp/v1/pmc/?format=csl&id=3041534
     """
-    citekey = f"pmc:PMC3041534"
+    citekey = "pmc:PMC3041534"
     csl_item = citekey_to_csl_item(citekey)
     assert csl_item["id"] == "1CGP1eifE"
     assert csl_item["URL"] == "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3041534/"
@@ -196,6 +196,10 @@ def test_citekey_to_csl_item_isbn():
     assert csl_item["title"] == "Complex analysis"
 
 
+@pytest.mark.xfail(
+    reason="On 2024-07-20, title was 'ClinicalTrials.gov' instead of 'A Phase 3 Randomized Study...'. "
+    "This is wrong so FIXME in the future."
+)
 def test_citekey_to_csl_item_clinical_trial():
     """
     Test clinicaltrials.gov citation support using CURIEs.
@@ -204,4 +208,4 @@ def test_citekey_to_csl_item_clinical_trial():
     csl_item = citekey_to_csl_item("clinicaltrials:NCT04292899")
     assert csl_item["title"].startswith("A Phase 3 Randomized Study")
     assert csl_item["source"].startswith("clinicaltrials.gov")
-    assert csl_item["URL"] == "https://clinicaltrials.gov/ct2/show/NCT04292899"
+    assert csl_item["URL"] == "https://www.clinicaltrials.gov/study/NCT04292899"

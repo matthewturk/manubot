@@ -6,6 +6,7 @@ the cited objects and the formatting instructions provided by
 Citation Style Language (CSL) styles.
 -- https://en.wikipedia.org/wiki/CiteProc
 """
+
 import copy
 import functools
 import logging
@@ -13,14 +14,14 @@ import logging
 from manubot.util import read_serialized_data
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def get_jsonschema_csl_validator():
     """
     Return a jsonschema validator for the CSL Item JSON Schema
     """
     import jsonschema
 
-    url = "https://github.com/dhimmel/csl-schema/raw/manubot/csl-data.json"
+    url = "https://github.com/citation-style-language/schema/raw/v1.0.2/schemas/input/csl-data.json"
     schema = read_serialized_data(url)
     Validator = jsonschema.validators.validator_for(schema)
     Validator.check_schema(schema)

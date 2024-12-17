@@ -29,14 +29,14 @@ def call_pandoc(metadata, path, format="plain"):
     _exit_without_pandoc()
     info = get_pandoc_info()
     _check_pandoc_version(info, metadata, format)
-    metadata_block = "---\n{yaml}\n...\n".format(
-        yaml=json.dumps(metadata, ensure_ascii=False, indent=2)
-    )
+    metadata_block = f"---\n{json.dumps(metadata, ensure_ascii=False, indent=2)}\n...\n"
     args = [
         "pandoc",
-        "--citeproc"
-        if info["pandoc version"] >= (2, 11)
-        else "--filter=pandoc-citeproc",
+        (
+            "--citeproc"
+            if info["pandoc version"] >= (2, 11)
+            else "--filter=pandoc-citeproc"
+        ),
         f"--output={path or '-'}",
     ]
     if format == "markdown":
@@ -124,7 +124,7 @@ def _exit_without_pandoc() -> None:
     if get_pandoc_info()["pandoc"]:
         return
     logging.critical(
-        f"pandoc command not found on system. Ensure that Pandoc is installed."
+        "pandoc command not found on system. Ensure that Pandoc is installed."
     )
     raise SystemExit(1)
 
@@ -136,7 +136,7 @@ def _check_pandoc_version(info, metadata, format):
     Please add additional minimum version information to this function, as its
     discovered.
     """
-    issues = list()
+    issues = []
     if format == "jats" and info["pandoc version"] < (2,):
         issues.append("--jats requires pandoc >= v2.0.")
     # --csl=URL did not work in https://travis-ci.org/greenelab/manubot/builds/417314743#L796,

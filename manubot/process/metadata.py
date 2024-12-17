@@ -1,6 +1,7 @@
 """
 Tools for manuscript metadata processing including thumbnail detection and processing.
 """
+
 import functools
 import logging
 import pathlib
@@ -20,7 +21,7 @@ def get_header_includes(variables: dict) -> str:
         template = path.read_text(encoding="utf-8-sig")
         return template_with_jinja2(template, variables)
     except Exception:
-        logging.exception(f"Error generating header-includes.")
+        logging.exception("Error generating header-includes.")
         return ""
 
 
@@ -100,7 +101,7 @@ def get_head_commit() -> Optional[str]:
         return None
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def git_repository_root():
     """
     Return the path to repository root directory or `None` if indeterminate.
@@ -148,7 +149,7 @@ def get_manuscript_urls(html_url: Optional[str] = None) -> dict:
 
     from .ci import get_continuous_integration_parameters
 
-    urls = dict()
+    urls = {}
     ci_params = get_continuous_integration_parameters()
     if html_url is None:
         if not ci_params:

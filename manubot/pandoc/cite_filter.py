@@ -81,6 +81,7 @@ Related resources on pandoc filters:
 - [python panflute package](https://github.com/sergiocorreia/panflute)
 - [panflute Citation class](http://scorreia.com/software/panflute/code.html#panflute.elements.Citation)
 """
+
 import argparse
 import logging
 import os
@@ -153,14 +154,14 @@ def _get_reference_link_citekey_aliases(elem: pf.Element, doc: pf.Doc) -> None:
     Based on pandoc-url2cite implementation by phiresky at
     https://github.com/phiresky/pandoc-url2cite/blob/b28374a9a037a5ce1747b8567160d8dffd64177e/index.ts#L118-L152
     """
-    if type(elem) != pf.Para:
+    if type(elem) is not pf.Para:
         # require link reference definitions to be in their own paragraph
         return
     while (
         len(elem.content) >= 3
-        and type(elem.content[0]) == pf.Cite
+        and type(elem.content[0]) is pf.Cite
         and len(elem.content[0].citations) == 1
-        and type(elem.content[1]) == pf.Str
+        and type(elem.content[1]) is pf.Str
         and elem.content[1].text == ":"
     ):
         # paragraph consists of at least a Cite (with one Citation),
@@ -168,7 +169,7 @@ def _get_reference_link_citekey_aliases(elem: pf.Element, doc: pf.Doc) -> None:
         # link destination and possibly more link-reference definitions.
         dest_index = 3 if type(elem.content[2]) in {pf.Space, pf.SoftBreak} else 2
         destination = elem.content[dest_index]
-        if type(destination) != pf.Str:
+        if type(destination) is not pf.Str:
             # prevent infinite loop as per https://github.com/manubot/manubot/pull/302#issuecomment-906743300
             logging.warning(
                 f"Unsupported destination type {type(destination)} in link reference syntax:\n{elem.to_json()}"
@@ -184,7 +185,7 @@ def _get_reference_link_citekey_aliases(elem: pf.Element, doc: pf.Doc) -> None:
         # found citation, add it to citekeys and remove it from document
         elem.content = elem.content[dest_index + 1 :]
         # remove leading SoftBreak, before continuing
-        if len(elem.content) > 0 and type(elem.content[0]) == pf.SoftBreak:
+        if len(elem.content) > 0 and type(elem.content[0]) is pf.SoftBreak:
             elem.content.pop(0)
 
 
@@ -203,10 +204,10 @@ def _get_load_manual_references_kwargs(doc: pf.Doc) -> Dict[str, Any]:
         and os.path.exists(bibliography_cache_path)
     ):
         bibliography_paths.append(bibliography_cache_path)
-    return dict(
-        paths=bibliography_paths,
-        extra_csl_items=manual_refs,
-    )
+    return {
+        "paths": bibliography_paths,
+        "extra_csl_items": manual_refs,
+    }
 
 
 def process_citations(doc: pf.Doc) -> None:
@@ -230,7 +231,7 @@ def process_citations(doc: pf.Doc) -> None:
             f"Expected metadata.citekey-aliases to be a dict, "
             f"but received a {citekey_aliases.__class__.__name__}. Disregarding."
         )
-        citekey_aliases = dict()
+        citekey_aliases = {}
     doc.manubot["citekey_aliases"] = citekey_aliases
     doc.walk(_get_reference_link_citekey_aliases)
     doc.walk(_get_citekeys_action)
@@ -275,7 +276,10 @@ def process_citations(doc: pf.Doc) -> None:
 
 
 def main() -> None:
-    from manubot.command import exit_if_error_handler_fired, setup_logging_and_errors
+    from manubot.command import (
+        exit_if_error_handler_fired,
+        setup_logging_and_errors,
+    )
 
     diagnostics = setup_logging_and_errors()
     args = parse_args()

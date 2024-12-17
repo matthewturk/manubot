@@ -4,9 +4,18 @@ import re
 
 from .handlers import Handler
 
+default_timeout = 3
+
+
+def set_isbnlib_timeout(seconds=default_timeout):
+    import isbnlib
+
+    isbnlib.config.setthreadstimeout(seconds=seconds)
+    isbnlib.config.seturlopentimeout(seconds=seconds)
+    return isbnlib
+
 
 class Handler_ISBN(Handler):
-
     standard_prefix = "isbn"
 
     prefixes = [
@@ -14,8 +23,7 @@ class Handler_ISBN(Handler):
     ]
 
     def inspect(self, citekey):
-        import isbnlib
-
+        isbnlib = set_isbnlib_timeout()
         fail = isbnlib.notisbn(citekey.accession, level="strict")
         if fail:
             return f"identifier violates the ISBN syntax according to isbnlib v{isbnlib.__version__}"
@@ -39,7 +47,7 @@ def get_isbn_csl_item(isbn: str):
     in order, with this function returning the metadata from the first
     non-failing method.
     """
-    import isbnlib
+    isbnlib = set_isbnlib_timeout()
 
     isbn = isbnlib.to_isbn13(isbn)
     for retriever in isbn_retrievers:
@@ -85,13 +93,13 @@ def get_isbn_csl_item_citoid(isbn: str):
                 f"{json.dumps(result.text)}"
             )
     (mediawiki,) = result
-    csl_item = dict()
+    csl_item = {}
     csl_item["type"] = mediawiki.get("itemType", "book")
     if "title" in mediawiki:
         csl_item["title"] = mediawiki["title"]
     if "author" in mediawiki:
-        csl_author = list()
-        for last, first in mediawiki["author"]:
+        csl_author = []
+        for first, last in mediawiki["author"]:
             csl_author.append({"given": first, "family": last})
         if csl_author:
             csl_item["author"] = csl_author
@@ -129,8 +137,7 @@ def get_isbn_csl_item_isbnlib(isbn: str):
     """
     Generate CSL JSON Data for an ISBN using isbnlib.
     """
-    import isbnlib
-
+    isbnlib = set_isbnlib_timeout()
     metadata = isbnlib.meta(isbn)
     csl_json = isbnlib.registry.bibformatters["csl"](metadata)
     csl_data = json.loads(csl_json)

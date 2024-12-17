@@ -2,10 +2,8 @@
 
 [![documentation](https://img.shields.io/badge/-Documentation-purple?logo=read-the-docs&logoColor=white&style=for-the-badge)](https://manubot.github.io/manubot/)
 [![PyPI](https://img.shields.io/pypi/v/manubot.svg?logo=PyPI&logoColor=white&style=for-the-badge)](https://pypi.org/project/manubot/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge&logo=Python&logoColor=white)](https://github.com/psf/black)
 
-[![GitHub Actions CI Tests Status](https://img.shields.io/github/workflow/status/manubot/manubot/Tests?label=actions&logo=github&style=for-the-badge)](https://github.com/manubot/manubot/actions)
-[![Travis Linux Build Status](https://img.shields.io/travis/com/manubot/manubot/main?style=for-the-badge&logo=travis&label=Travis)](https://travis-ci.com/manubot/manubot)
+[![GitHub Actions CI Tests Status](https://img.shields.io/github/actions/workflow/status/manubot/manubot/test.yml?branch=main&label=actions&style=for-the-badge&logo=github&logoColor=white)](https://github.com/manubot/manubot/actions)
 [![AppVeyor Windows Build Status](https://img.shields.io/appveyor/build/manubot/manubot/main?style=for-the-badge&logo=appveyor&logoColor=white&label=AppVeyor)](https://ci.appveyor.com/project/manubot/manubot/branch/main)
 
 
@@ -16,6 +14,7 @@ Package documentation is available at <https://manubot.github.io/manubot> (auto-
 The `manubot cite` command-line interface retrieves and formats bibliographic metadata for user-supplied persistent identifiers like DOIs or PubMed IDs.
 The `manubot process` command-line interface prepares scholarly manuscripts for Pandoc consumption.
 The `manubot process` command is used by Manubot manuscripts, which are based off the [Rootstock template](https://github.com/manubot/rootstock), to automate several aspects of manuscript generation.
+The `manubot ai-revision` command is used to automatically revise a manuscript based on a set of AI-generated suggestions.
 See Rootstock's [manuscript usage guide](https://github.com/manubot/rootstock/blob/main/USAGE.md) for more information.
 
 **Note:**
@@ -65,7 +64,7 @@ Here is the usage information as per `manubot --help`:
 
 <!-- test codeblock contains output of `manubot --help` -->
 ```
-usage: manubot [-h] [--version] {process,cite,webpage} ...
+usage: manubot [-h] [--version] {process,cite,webpage,ai-revision} ...
 
 Manubot: the manuscript bot for scholarly writing
 
@@ -76,10 +75,11 @@ options:
 subcommands:
   All operations are done through subcommands:
 
-  {process,cite,webpage}
+  {process,cite,webpage,ai-revision}
     process             process manuscript content
     cite                citekey to CSL JSON command line utility
     webpage             deploy Manubot outputs to a webpage directory tree
+    ai-revision         revise manuscript content with language models
 ```
 
 Note that all operations are done through the following sub-commands.
@@ -227,7 +227,7 @@ options:
 This package creates the `pandoc-manubot-cite` Pandoc filter,
 providing access to Manubot's cite-by-ID functionality from within a Pandoc workflow.
 
-Options are set via Pandoc metadata fields [listed in the docs](https://manubot.github.io/manubot/reference/manubot/pandoc/cite_filter.html).
+Options are set via Pandoc metadata fields [listed in the docs](https://manubot.github.io/manubot/reference/manubot/pandoc/cite_filter).
 
 <!-- test codeblock contains output of `pandoc-manubot-cite --help` -->
 ```
@@ -303,6 +303,56 @@ options:
                         Set the logging level for stderr logging
 ```
 
+### AI-assisted academic authoring
+
+The `manubot ai-revision` command uses large language models from [OpenAI](https://openai.com/api/) to automatically revise a manuscript and suggest text improvements.
+
+<!-- test codeblock contains output of `manubot ai-revision --help` -->
+```
+usage: manubot ai-revision [-h] --content-directory CONTENT_DIRECTORY
+                           [--config-directory CONFIG_DIRECTORY]
+                           [--model-type MODEL_TYPE]
+                           [--model-kwargs key=value [key=value ...]]
+                           [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+
+Revise manuscript content using AI models to suggest text improvements.
+
+options:
+  -h, --help            show this help message and exit
+  --content-directory CONTENT_DIRECTORY
+                        Directory where manuscript content files are located.
+  --config-directory CONFIG_DIRECTORY
+                        Directory where AI revision configuration files are
+                        located. If unspecified, disables custom
+                        configuration.
+  --model-type MODEL_TYPE
+                        Model type used to revise the manuscript. Default is
+                        GPT3CompletionModel. It can be any subclass of
+                        manubot_ai_editor.models.ManuscriptRevisionModel
+  --model-kwargs key=value [key=value ...]
+                        Keyword arguments for the revision model (--model-
+                        type), with format key=value.
+  --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        Set the logging level for stderr logging
+```
+
+The usual call is:
+
+```
+manubot ai-revision --content-directory content/
+```
+
+The parameters `--model-type` and `--model-kwargs` are used for debugging purposes.
+For example, since the tool splits the text into paragraphs, you might want to see if paragraphs were detected correctly.
+The tool incurs a cost when using the OpenAI API, so this could be important to check for text with complicated structure.
+
+```
+manubot ai-revision \
+  --content-directory content/ \
+  --model-type DummyManuscriptRevisionModel \
+  --model-kwargs add_paragraph_marks=true
+```
+
 ## Development
 
 ### Environment
@@ -311,7 +361,7 @@ Create a development environment using:
 
 ```shell
 conda create --name manubot-dev --channel conda-forge \
-  python=3.10 pandoc=2.8
+  python=3.11 pandoc=2.11.3.1
 conda activate manubot-dev  # assumes conda >= 4.4
 pip install --editable ".[webpage,dev]"
 ```

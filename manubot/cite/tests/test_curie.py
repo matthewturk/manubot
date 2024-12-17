@@ -1,7 +1,12 @@
 import pytest
 
 from ..citekey import CiteKey
-from ..curie import Handler_CURIE, curie_to_url, get_bioregistry, get_prefix_to_resource
+from ..curie import (
+    Handler_CURIE,
+    curie_to_url,
+    get_bioregistry,
+    get_prefix_to_resource,
+)
 
 
 def test_bioregistry_resource_patterns():
@@ -10,7 +15,7 @@ def test_bioregistry_resource_patterns():
     """
     registry = get_bioregistry(compile_patterns=True)
     assert isinstance(registry, list)
-    reports = list()
+    reports = []
     for resource in registry:
         assert resource["prefix"]  # ensure prefix field exists
         if "example" in resource and "pattern" in resource:
@@ -41,30 +46,30 @@ def test_get_prefix_to_resource():
         ("arXiv:0807.4956v1", "https://arxiv.org/abs/0807.4956v1"),
         (
             "taxonomy:9606",
-            "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=9606",
+            "http://purl.obolibrary.org/obo/NCBITaxon_9606",
         ),
-        ("CHEBI:36927", "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:36927"),
-        ("ChEBI:36927", "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:36927"),
+        ("CHEBI:36927", "http://purl.obolibrary.org/obo/CHEBI_36927"),
+        ("ChEBI:36927", "http://purl.obolibrary.org/obo/CHEBI_36927"),
         (
             "DOID:11337",
-            "https://www.ebi.ac.uk/ols/ontologies/doid/terms?obo_id=DOID:11337",
+            "http://purl.obolibrary.org/obo/DOID_11337",
         ),
         (
             "doid:11337",
-            "https://www.ebi.ac.uk/ols/ontologies/doid/terms?obo_id=DOID:11337",
+            "http://purl.obolibrary.org/obo/DOID_11337",
         ),
         (
             "clinicaltrials:NCT00222573",
-            "https://clinicaltrials.gov/ct2/show/NCT00222573",
+            "https://www.clinicaltrials.gov/study/NCT00222573",
         ),
         (
             "clinicaltrials:NCT04292899",
-            "https://clinicaltrials.gov/ct2/show/NCT04292899",
+            "https://www.clinicaltrials.gov/study/NCT04292899",
         ),
         # formerly afflicted by https://github.com/identifiers-org/identifiers-org.github.io/issues/99#issuecomment-614690283
         pytest.param(
             "gramene.growthstage:0007133",
-            "http://www.gramene.org/db/ontology/search?id=GRO:0007133",
+            "http://www.bootstrep.eu/ontology/GRO#0007133",
             id="gramene.growthstage",
         ),
     ],

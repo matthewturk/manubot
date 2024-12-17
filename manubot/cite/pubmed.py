@@ -2,7 +2,6 @@ import functools
 import json
 import logging
 import os
-import warnings
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from xml.etree import ElementTree
 
@@ -15,7 +14,6 @@ from .handlers import Handler
 
 
 class Handler_PubMed(Handler):
-
     standard_prefix = "pubmed"
 
     prefixes = [
@@ -40,7 +38,6 @@ class Handler_PubMed(Handler):
 
 
 class Handler_PMC(Handler):
-
     standard_prefix = "pmc"
     prefixes = [
         "pmc",
@@ -75,9 +72,9 @@ def get_pmc_csl_item(pmcid: str) -> Dict[str, Any]:
     assert pmcid.startswith("PMC")
     csl_item = _get_literature_citation_exporter_csl_item("pmc", pmcid[3:])
     if "URL" not in csl_item:
-        csl_item[
-            "URL"
-        ] = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{csl_item.get('PMCID', pmcid)}/"
+        csl_item["URL"] = (
+            f"https://www.ncbi.nlm.nih.gov/pmc/articles/{csl_item.get('PMCID', pmcid)}/"
+        )
     return csl_item
 
 
@@ -92,13 +89,13 @@ def _get_literature_citation_exporter_csl_item(
             f"Error calling _get_literature_citation_exporter_csl_item.\n"
             f'database must be either "pubmed" or "pmc", not {database}'
         )
-        assert False
+        raise AssertionError()
     if not identifier:
         logging.error(
-            f"Error calling _get_literature_citation_exporter_csl_item.\n"
-            f"identifier cannot be blank"
+            "Error calling _get_literature_citation_exporter_csl_item.\n"
+            "identifier cannot be blank"
         )
-        assert False
+        raise AssertionError()
     params = {"format": "csl", "id": identifier}
     headers = {"User-Agent": get_manubot_user_agent()}
     url = f"https://api.ncbi.nlm.nih.gov/lit/ctxp/v1/{database}/"
@@ -118,7 +115,7 @@ def _get_literature_citation_exporter_csl_item(
             f"Literature Citation Exporter returned JSON indicating an error for {response.url}\n"
             f"{json.dumps(csl_item, indent=2)}"
         )
-        assert False
+        raise AssertionError()
     return csl_item
 
 
@@ -130,7 +127,7 @@ def get_pubmed_csl_item(pmid: Union[str, int]) -> Dict[str, Any]:
     https://github.com/ncbi/citation-exporter/issues/3#issuecomment-355313143
     """
     pmid = str(pmid)
-    params = {"db": "pubmed", "id": pmid, "rettype": "full"}
+    params = {"db": "pubmed", "id": pmid, "retmode": "xml"}
     headers = {"User-Agent": get_manubot_user_agent()}
     url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     with _get_eutils_rate_limiter():
@@ -166,7 +163,7 @@ def csl_item_from_pubmed_article(article: ElementTree.Element) -> Dict[str, Any]
             f"Expected article to be an XML element with tag PubmedArticle, received tag {article.tag!r}"
         )
 
-    csl_item = dict()
+    csl_item = {}
 
     if not article.find("MedlineCitation/Article"):
         raise NotImplementedError("Unsupported PubMed record: no <Article> element")
@@ -203,10 +200,10 @@ def csl_item_from_pubmed_article(article: ElementTree.Element) -> Dict[str, Any]
     if date_parts:
         csl_item["issued"] = {"date-parts": [date_parts]}
 
-    authors_csl = list()
+    authors_csl = []
     authors = article.findall("MedlineCitation/Article/AuthorList/Author")
     for author in authors:
-        author_csl = dict()
+        author_csl = {}
         given = author.findtext("ForeName")
         if given:
             author_csl["given"] = given
@@ -372,24 +369,26 @@ def get_pubmed_ids_for_doi(doi: str) -> Dict[str, str]:
 
 
 if TYPE_CHECKING:
-    # support RateLimiter return type while avoiding unused runtime import
+    # support PyrateLimiter return type while avoiding unused runtime import
     # https://stackoverflow.com/a/39757388/4651668
-    from ratelimiter import RateLimiter
+    from pyrate_limiter import Limiter
 
 
-@functools.lru_cache()
-def _get_eutils_rate_limiter() -> "RateLimiter":
+@functools.lru_cache
+def _get_eutils_rate_limiter() -> "Limiter":
     """
     Rate limiter to cap NCBI E-utilities queries to <= 3 per second as per
     https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/
+    https://pyratelimiter.readthedocs.io/en/latest/
+    https://github.com/vutran1710/PyrateLimiter
     """
-    with warnings.catch_warnings():
-        # https://github.com/RazerM/ratelimiter/issues/10
-        # https://github.com/manubot/manubot/issues/257
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        from ratelimiter import RateLimiter
+    # does not work pyrate_limiter v3
+    # https://github.com/manubot/manubot/issues/367
+    from pyrate_limiter import Duration, Limiter, RequestRate
 
     if "CI" in os.environ:
         # multiple CI jobs might be running concurrently
-        return RateLimiter(max_calls=1, period=1.5)
-    return RateLimiter(max_calls=2, period=1)
+        rate = RequestRate(limit=1, interval=Duration.SECOND * 2)
+    else:
+        rate = RequestRate(limit=2, interval=Duration.SECOND)
+    return Limiter(rate).ratelimit("ncbi_eutils", delay=True)

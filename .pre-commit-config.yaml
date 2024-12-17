@@ -1,6 +1,8 @@
+default_language_version:
+  python: python3.11
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v4.6.0
     hooks:
       # Check for files that contain merge conflict strings.
       - id: check-merge-conflict
@@ -14,22 +16,10 @@ repos:
       - id: check-toml
       # This hook checks yaml files for parseable syntax.
       - id: check-yaml
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v2.31.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.3
     hooks:
-      - id: pyupgrade
-        args: [--py37-plus]
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.10.1
-    hooks:
-      - id: isort
-  - repo: https://github.com/python/black
-    rev: 21.12b0
-    hooks:
-      - id: black
-        language_version: python3
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
-    hooks:
-      - id: flake8
-        language_version: python3
+      - id: ruff
+        args:
+        - --fix
+      - id: ruff-format

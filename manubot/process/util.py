@@ -4,12 +4,17 @@ import os
 import random
 import re
 import warnings
+from datetime import date
 from typing import List, Optional
 
 import jinja2
 
 from manubot.process.ci import get_continuous_integration_parameters
-from manubot.process.manuscript import datetime_now, get_manuscript_stats, get_text
+from manubot.process.manuscript import (
+    datetime_now,
+    get_manuscript_stats,
+    get_text,
+)
 from manubot.process.metadata import (
     get_head_commit,
     get_header_includes,
@@ -17,7 +22,11 @@ from manubot.process.metadata import (
     get_software_versions,
     get_thumbnail_url,
 )
-from manubot.util import get_configured_yaml, read_serialized_data, read_serialized_dict
+from manubot.util import (
+    get_configured_yaml,
+    read_serialized_data,
+    read_serialized_dict,
+)
 
 
 def read_variable_files(paths: List[str], variables: Optional[dict] = None) -> dict:
@@ -105,6 +114,7 @@ def _convert_field_to_list(
                 )
                 + f"Please switch {field} to a list.",
                 category=DeprecationWarning,
+                stacklevel=2,
             )
         return dictionary
     raise ValueError("Unsupported value type {value.__class__.__name__}")
@@ -125,7 +135,7 @@ def add_author_affiliations(variables: dict) -> dict:
     affiliations to the top-level of variables. If no authors have any
     affiliations, variables is left unmodified.
     """
-    affiliations = list()
+    affiliations = []
     for author in variables["authors"]:
         _convert_field_to_list(
             dictionary=author,
@@ -146,7 +156,7 @@ def add_author_affiliations(variables: dict) -> dict:
         numbers = [affil_to_number[affil] for affil in author.get("affiliations", [])]
         author["affiliation_numbers"] = sorted(numbers)
     variables["affiliations"] = [
-        dict(affiliation=affil, affiliation_number=i)
+        {"affiliation": affil, "affiliation_number": i}
         for affil, i in affil_to_number.items()
     ]
     return variables
@@ -191,14 +201,25 @@ def load_variables(args) -> dict:
         if key in metadata:
             variables["pandoc"][key] = metadata.pop(key)
 
-    # Add date to metadata
+    # Add date & generated timestamp to metadata
+    manuscript_date = metadata.pop("date", None)
+    if isinstance(manuscript_date, str):
+        manuscript_date = date.fromisoformat(manuscript_date)
     now = datetime_now()
-    logging.info(
-        f"Using {now:%Z} timezone.\n"
-        f"Dating manuscript with the current datetime: {now.isoformat()}"
+    if not manuscript_date:
+        manuscript_date = now.date()
+        logging.info(
+            "No explicit manuscript date provided. "
+            f"Dating manuscript based on the current datetime: {now.isoformat()} "
+            f"(in the {now:%Z} timezone)"
+        )
+    variables["pandoc"]["date-meta"] = manuscript_date.isoformat()
+    variables["manubot"]["date"] = manuscript_date.isoformat()
+    variables["manubot"]["date_long"] = (
+        f"{manuscript_date:%B} {manuscript_date.day}, {manuscript_date.year}"
     )
-    variables["pandoc"]["date-meta"] = now.date().isoformat()
-    variables["manubot"]["date"] = f"{now:%B} {now.day}, {now.year}"
+    variables["manubot"]["generated"] = now.isoformat(timespec="seconds")
+    variables["manubot"]["generated_date_long"] = f"{now:%B} {now.day}, {now.year}"
 
     # Process authors metadata
     if "author_info" in metadata:
@@ -206,6 +227,7 @@ def load_variables(args) -> dict:
         warnings.warn(
             "metadata.yaml: 'author_info' is deprecated. Use 'authors' instead.",
             category=DeprecationWarning,
+            stacklevel=2,
         )
     else:
         authors = metadata.pop("authors", [])
@@ -296,6 +318,11 @@ def template_with_jinja2(text, variables):
         comment_start_string="{##",
         comment_end_string="##}",
         extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols"],
+        # A trailing newline is critical to prevent pyyaml
+        # from adding a block chomping strip indicator to
+        # header-includes metadata, which caused an unwanted Pandoc behavior.
+        # https://github.com/jgm/pandoc/issues/8449
+        keep_trailing_newline=True,
     )
     template = jinja_environment.from_string(text)
     return template.render(**variables)
